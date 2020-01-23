@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "author": "arleyGuoLei <34805850@qq.com>",
   "description": "基于electron-vue实现的微信小程序云开发数据库文件批量导入。",
-  "license": null,
+  "license": "MIT",
   "main": "./dist/electron/main.js",
   "scripts": {
     "build": "node .electron-vue/build.js && electron-builder",

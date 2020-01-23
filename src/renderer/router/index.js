@@ -7,8 +7,13 @@ export default new Router({
   routes: [
     {
       path: '/',
-      name: 'landing-page',
-      component: require('@/components/LandingPage').default
+      name: 'login',
+      component: require('@/components/Login').default
+    },
+    {
+      path: '/DatabaseImport',
+      name: 'database-import',
+      component: require('@/components/DatabaseImport').default
     },
     {
       path: '*',
