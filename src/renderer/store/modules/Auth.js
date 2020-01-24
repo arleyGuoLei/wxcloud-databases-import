@@ -34,6 +34,7 @@ const actions = {
         createTime = Date.now()
         commit('UPDATE_ACCESSTOKEN', { appid, secret, accessToken, createTime, expiresIn })
       }
+      return accessToken
     } catch (error) {
       throw error
     }

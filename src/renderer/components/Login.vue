@@ -46,7 +46,9 @@ export default {
     }
   },
   mounted () {
+    this.$electron.remote.getCurrentWindow().setSize(248, 316)
     this.$electron.remote.getCurrentWindow().setTitle('登录')
+    this.$electron.remote.getCurrentWindow().center()
   },
   methods: {
     ...mapActions({
