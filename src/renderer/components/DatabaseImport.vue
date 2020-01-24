@@ -76,7 +76,7 @@
 <script>
 import { mapActions, mapState } from 'vuex'
 import { getAllFiles } from '@/utils/tool.js'
-import { getUploadFileInfo, uploadFile, databaseMigrateImport } from '@/utils/api.js'
+import { getUploadFileInfo, uploadFile, databaseMigrateImport, databaseMigrateQueryInfo, batchDeleteFile, databaseCollectionAdd } from '@/utils/api.js'
 const HEIGHT = 375
 const WIDTH = 400
 const LOG_WIDTH = 750
@@ -87,14 +87,15 @@ export default {
   data () {
     return {
       envId: 'dev-37f210',
-      collectionName: 'words',
+      collectionName: 'todos',
       type: 'JSON',
       mode: 'INSERT',
       errorStop: true,
       overDelete: true,
       fileList: [],
       pathDuplicateRemoval: {}, // 路径去重
-      isStart: false
+      isStart: false,
+      overLen: 0
     }
   },
   computed: {
@@ -109,6 +110,22 @@ export default {
     this.$electron.remote.getCurrentWindow().center()
   },
   watch: {
+    overLen () {
+      const { length } = this.fileList
+      if (this.overLen === length && length !== 0) {
+        this.isStart = false
+        this.overLen = 0
+        this.fileList = []
+        this.pathDuplicateRemoval = {}
+        this.$electron.remote.dialog.showMessageBox({
+          type: 'info',
+          title: '提示',
+          message: '已完成所有数据库导入',
+          buttons: ['确定'],
+          icon: `${__static}/logo.png`
+        })
+      }
+    },
     fileList () {
       const [, width] = this.$electron.remote.getCurrentWindow().getSize()
       if (this.fileList.length !== 0) {
@@ -149,12 +166,7 @@ export default {
               path: file,
               progress: 0,
               log: '已选择文件, 等待上传导入...',
-              jobId: '',
-              file_id: '',
-              url: '',
-              token: '',
-              authorization: '',
-              cos_file_id: '',
+              fileId: '',
               cancel: () => {}
             })
             this.pathDuplicateRemoval[file] = true
@@ -165,8 +177,40 @@ export default {
     getFileName (file) {
       return file.match(/.+\/(.+)$/)[1]
     },
-    startImport () {
-      const { envId, collectionName, fileList } = this
+    async queryInfo (index, jobId) {
+      const { appid, secret, envId, overDelete } = this
+      const config = databaseMigrateQueryInfo(await this.login({appid, secret}), envId, jobId)
+      const { data } = await this.$http(config)
+      if (data.errcode !== 0) {
+        this.fileList[index].log = '任务失败: ' + data.errmsg
+      }
+      if (data.status !== 'success') {
+        setTimeout(() => {
+          this.fileList[index].log = `(导入中) 任务${jobId}: ${data.status} ...`
+          return this.queryInfo(index, jobId)
+        }, 1000)
+      } else {
+        this.fileList[index].log = `成功导入: ${data.record_success}条数据`
+        if (overDelete) {
+          this.fileList[index].progress = 99
+          await this.deleteCloudFile(this.fileList[index].fileId)
+          this.fileList[index].progress = 100
+          this.fileList[index].log = `成功导入: ${data.record_success}条数据 (已删除存储)`
+          this.overLen++
+        } else {
+          this.fileList[index].progress = 100
+          this.overLen++
+        }
+      }
+    },
+    async deleteCloudFile (fileId) {
+      const { appid, secret, envId } = this
+      const config = batchDeleteFile(await this.login({ appid, secret }), envId, fileId)
+      const { data } = await this.$http(config)
+      return data
+    },
+    async startImport () {
+      const { envId, collectionName, fileList, appid, secret } = this
       if (
         envId.length === 0 ||
         collectionName.length === 0 ||
@@ -182,6 +226,7 @@ export default {
         return ''
       }
       this.isStart = true
+      await this.$http(databaseCollectionAdd(await this.login({appid, secret}), envId, collectionName))
       this.forImport()
     },
     async forImport () {
@@ -197,12 +242,10 @@ export default {
           if (data.errcode !== 0) {
             throw new Error(data.errmsg)
           }
-          this.fileList[index].file_id = data.file_id
-          this.fileList[index].url = data.url
-          this.fileList[index].token = data.token
-          this.fileList[index].cos_file_id = data.cos_file_id
-          this.fileList[index].authorization = data.authorization
+
           this.fileList[index].log = '获取上传链接成功, 准备上传...'
+          this.fileList[index].fileId = data.file_id
+          console.log('log => : forImport -> data', data)
 
           // 2. 开始上传文件
           const baseConfig = uploadFile(data.url, path, data.authorization, data.token, data.cos_file_id, this.fileList[index].path)
@@ -214,13 +257,22 @@ export default {
             this.fileList[index].progress = complete >= 0 ? complete : 0
           }
           await this.$http(baseConfig)
+
           this.fileList[index].log = '文件上传成功, 正在导入...'
 
           //  3. 导入
           const importConfig = databaseMigrateImport(await this.login({appid, secret}), envId, collectionName, path, type, errorStop, mode)
           const result = await this.$http(importConfig)
-          console.log('log => : upload -> result', result)
+          if (result.data.errcode !== 0) {
+            throw new Error(result.data.errmsg)
+          }
+          const jobId = result.data.job_id
+          this.fileList[index].log = `已经申请导入, 任务ID: ${jobId}`
+          this.fileList[index].progress = 95
+
+          this.queryInfo(index, jobId)
         } catch (error) {
+          this.overLen++
           if (typeof (this.fileList[index].log) !== 'undefined') {
             this.fileList[index].log = error.message
           }

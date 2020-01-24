@@ -62,3 +62,48 @@ export const databaseMigrateImport = (accessToken, env, collectionName, filePath
     }
   }
 }
+
+// https://developers.weixin.qq.com/miniprogram/dev/wxcloud/reference-http-api/database/databaseMigrateQueryInfo.html
+export const databaseMigrateQueryInfo = (accessToken, env, jobId) => {
+  return {
+    method: 'POST',
+    url: 'https://api.weixin.qq.com/tcb/databasemigratequeryinfo',
+    params: {
+      access_token: accessToken
+    },
+    data: {
+      env,
+      job_id: jobId
+    }
+  }
+}
+
+// https://developers.weixin.qq.com/miniprogram/dev/wxcloud/reference-http-api/database/databaseDelete.html
+export const batchDeleteFile = (accessToken, env, fileId) => {
+  return {
+    method: 'POST',
+    url: 'https://api.weixin.qq.com/tcb/batchdeletefile',
+    params: {
+      access_token: accessToken
+    },
+    data: {
+      env,
+      fileid_list: [fileId]
+    }
+  }
+}
+
+// https://developers.weixin.qq.com/miniprogram/dev/wxcloud/reference-http-api/database/databaseCollectionAdd.html
+export const databaseCollectionAdd = (accessToken, env, collectionName) => {
+  return {
+    method: 'POST',
+    url: 'https://api.weixin.qq.com/tcb/databasecollectionadd',
+    params: {
+      access_token: accessToken
+    },
+    data: {
+      env,
+      collection_name: collectionName
+    }
+  }
+}
