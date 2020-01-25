@@ -28,7 +28,8 @@ function createWindow () {
       webSecurity: false
     },
     frame: false,
-    icon: `${__static}/logo.png`
+    icon: `${__static}/logo.png`,
+    center: true
   })
 
   mainWindow.loadURL(winURL)
