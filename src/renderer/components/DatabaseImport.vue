@@ -86,8 +86,8 @@ export default {
   components: {},
   data () {
     return {
-      envId: 'dev-37f210',
-      collectionName: 'todos',
+      envId: '',
+      collectionName: '',
       type: 'JSON',
       mode: 'INSERT',
       errorStop: true,
