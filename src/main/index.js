@@ -1,6 +1,6 @@
 'use strict'
 
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, globalShortcut } from 'electron'
 /**
  * Set `__static` path to static files in production
  * https://simulatedgreg.gitbooks.io/electron-vue/content/en/using-static-assets.html
@@ -59,22 +59,30 @@ app.on('activate', () => {
   }
 })
 
-/**
- * Auto Updater
- *
- * Uncomment the following code below and install `electron-updater` to
- * support auto updating. Code Signing with a valid certificate is required.
- * https://simulatedgreg.gitbooks.io/electron-vue/content/en/using-electron-builder.html#auto-updating
- */
+app.on('browser-window-focus', () => {
+  if (!mainWindow) return
 
-/*
-import { autoUpdater } from 'electron-updater'
+  if (process.platform === 'darwin') {
+    let contents = mainWindow.webContents
 
-autoUpdater.on('update-downloaded', () => {
-  autoUpdater.quitAndInstall()
+    globalShortcut.register('CommandOrControl+C', () => {
+      contents.copy()
+    })
+
+    globalShortcut.register('CommandOrControl+V', () => {
+      contents.paste()
+    })
+
+    globalShortcut.register('CommandOrControl+X', () => {
+      contents.cut()
+    })
+
+    globalShortcut.register('CommandOrControl+A', () => {
+      contents.selectAll()
+    })
+  }
 })
 
-app.on('ready', () => {
-  if (process.env.NODE_ENV === 'production') autoUpdater.checkForUpdates()
+app.on('browser-window-blur', () => {
+  globalShortcut.unregisterAll()
 })
- */
